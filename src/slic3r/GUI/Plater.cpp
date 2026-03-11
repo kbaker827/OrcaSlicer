@@ -9824,13 +9824,15 @@ void Plater::calib_temp(const Calib_Params& params) {
     auto obj_bb = model().objects[0]->bounding_box_exact();
     auto block_count = lround((350 - params.end) / 5 + 1);
     if(block_count > 0){
-        // add EPSILON offset to avoid cutting at the exact location where the flat surface is
-        auto new_height = block_count * 10.0 + EPSILON;
+        // BBS fix #159: subtract EPSILON so the cut lands just below the block surface,
+        // preventing the cut plane from coinciding with an existing flat face of the mesh
+        // (which produces non-manifold edges, unsliceable on macOS/Linux).
+        auto new_height = block_count * 10.0 - EPSILON;
         if (new_height < obj_bb.size().z()) {
             cut_horizontal(0, 0, new_height, ModelObjectCutAttribute::KeepLower);
         }
     }
-    
+
     // cut bottom
     obj_bb = model().objects[0]->bounding_box_exact();
     block_count = lround((350 - params.start) / 5);
@@ -9840,7 +9842,7 @@ void Plater::calib_temp(const Calib_Params& params) {
             cut_horizontal(0, 0, new_height, ModelObjectCutAttribute::KeepUpper);
         }
     }
-    
+
     p->background_process.fff_print()->set_calib_params(params);
 }
 
@@ -9905,7 +9907,9 @@ void Plater::calib_max_vol_speed(const Calib_Params& params)
 
     //  cut upper
     auto obj_bb = obj->bounding_box_exact();
-    auto height = (params.end - params.start + 1) / params.step;
+    // BBS fix #159: subtract EPSILON to avoid cutting at an exact flat surface of the
+    // model, which produces non-manifold edges that are unsliceable on macOS/Linux.
+    auto height = (params.end - params.start + 1) / params.step - EPSILON;
     if (height < obj_bb.size().z()) {
         cut_horizontal(0, 0, height, ModelObjectCutAttribute::KeepLower);
     }
@@ -9954,7 +9958,9 @@ void Plater::calib_retraction(const Calib_Params& params)
 
     //  cut upper
     auto obj_bb = obj->bounding_box_exact();
-    auto height = 1.0 + 0.4 + ((params.end - params.start)) / params.step;
+    // BBS fix #159: subtract EPSILON to avoid cutting at an exact flat surface of the
+    // model, which produces non-manifold edges that are unsliceable on macOS/Linux.
+    auto height = 1.0 + 0.4 + ((params.end - params.start)) / params.step - EPSILON;
     if (height < obj_bb.size().z()) {
         cut_horizontal(0, 0, height, ModelObjectCutAttribute::KeepLower);
     }
@@ -9997,7 +10003,9 @@ void Plater::calib_VFA(const Calib_Params& params)
 
     // cut upper
     auto obj_bb = model().objects[0]->bounding_box_exact();
-    auto height = 5 * ((params.end - params.start) / params.step + 1);
+    // BBS fix #159: subtract EPSILON to avoid cutting at an exact flat surface of the
+    // model, which produces non-manifold edges that are unsliceable on macOS/Linux.
+    auto height = 5 * ((params.end - params.start) / params.step + 1) - EPSILON;
     if (height < obj_bb.size().z()) {
         cut_horizontal(0, 0, height, ModelObjectCutAttribute::KeepLower);
     }
