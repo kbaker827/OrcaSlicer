@@ -914,6 +914,10 @@ bool GuideFrame::apply_config(AppConfig *app_config, PresetBundle *preset_bundle
     // Update the selections from the compatibilty.
     preset_bundle->export_selections(*app_config);
 
+    // BBS fix #101: Persist filament/vendor selections to disk immediately so they
+    // survive if the user closes the app before the next periodic dirty-save fires.
+    app_config->save();
+
     return true;
 }
 
