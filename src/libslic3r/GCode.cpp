@@ -2500,20 +2500,24 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
                 bool prime_extruder = false;
                 if (finished_objects > 0) {
                     // Move to the origin position for the copy we're going to print.
-                    // This happens before Z goes down to layer 0 again, so that no collision happens hopefully.
+                    // This happens before Z goes down to layer 0 again, so that no collision happens.
                     m_enable_cooling_markers = false; // we're not filtering these moves through CoolingBuffer
                     m_avoid_crossing_perimeters.use_external_mp_once();
-                    // BBS. change tool before moving to origin point.
+                    // BBS fix #136: Retract and raise Z to a safe clearance height BEFORE performing
+                    // any tool change.  On printers with dual independent carriages (IDEX) or offset
+                    // nozzles, the T-command inside change_filament_gcode triggers a physical carriage
+                    // movement.  If that movement happens while Z is still at the last printed layer of
+                    // the previous object, the carriage can collide with that object.  Raising Z first
+                    // guarantees that all subsequent carriage movements clear the printed parts.
+                    file.write(this->retract());
+                    file.write(m_writer.travel_to_z(m_max_layer_z));
+                    // BBS. change tool after raising Z, now safe from collision.
                     if (m_writer.need_toolchange(initial_extruder_id)) {
                         const PrintObjectConfig& object_config = object.config();
                         coordf_t initial_layer_print_height = print.config().initial_layer_print_height.value;
                         file.write(this->set_extruder(initial_extruder_id, initial_layer_print_height, true));
                         prime_extruder = true;
                     }
-                    else {
-                        file.write(this->retract());
-                    }
-                    file.write(m_writer.travel_to_z(m_max_layer_z));
                     file.write(this->travel_to(Point(0, 0), erNone, "move to origin position for next object"));
                     m_enable_cooling_markers = true;
                     // Disable motion planner when traveling to first object point.

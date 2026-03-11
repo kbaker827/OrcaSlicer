@@ -1663,7 +1663,10 @@ void PresetBundle::update_selections(AppConfig &config)
 
     std::string first_visible_filament_name;
     for (auto & fp : filament_presets) {
-        if (auto it = filaments.find_preset_internal(fp); it == filaments.end() || !it->is_visible || !it->is_compatible) {
+        // BBS fix #115: Only replace filament presets that no longer exist in the collection.
+        // Presets that exist but are invisible or incompatible should be kept so the Print
+        // Preprocessing dialog can still display the correct filament type.
+        if (auto it = filaments.find_preset_internal(fp); it == filaments.end()) {
             if (first_visible_filament_name.empty())
                 first_visible_filament_name = filaments.first_compatible().name;
             fp = first_visible_filament_name;
@@ -1789,7 +1792,11 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
 
     std::string first_visible_filament_name;
     for (auto & fp : filament_presets) {
-        if (auto it = filaments.find_preset_internal(fp); it == filaments.end() || !it->is_visible || !it->is_compatible) {
+        // BBS fix #115: Only replace filament presets that no longer exist in the collection.
+        // Presets that exist but are invisible or incompatible (e.g. because the user did not
+        // enable them in the System Filaments dialog) should be kept so that the Print
+        // Preprocessing dialog can still display the correct filament type.
+        if (auto it = filaments.find_preset_internal(fp); it == filaments.end()) {
             if (first_visible_filament_name.empty())
                 first_visible_filament_name = filaments.first_compatible().name;
             fp = first_visible_filament_name;
