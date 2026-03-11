@@ -176,6 +176,11 @@ void SMUserLogin::OnNavigationRequest(wxWebViewEvent &evt)
         info->set_user_login(true);
         info->set_user_token(token);
 
+        // BBS fix #116: Persist the token so it survives app restarts on macOS/Linux
+        // (WebKit does not preserve session cookies between runs).
+        wxGetApp().app_config->set("sm_user_token", token);
+        wxGetApp().app_config->save();
+
         this->EndModal(wxID_OK);
 
         wxGetApp().CallAfter([info, this]() {
@@ -190,19 +195,26 @@ void SMUserLogin::OnNavigationRequest(wxWebViewEvent &evt)
                             if (response.count("data")) {
                                 json data = response["data"];
                                 if (data.count("nickname")) {
-                                    wxGetApp().sm_get_userinfo()->set_user_name(data["nickname"].get<std::string>());
+                                    std::string name = data["nickname"].get<std::string>();
+                                    wxGetApp().sm_get_userinfo()->set_user_name(name);
+                                    // BBS fix #116: persist display name.
+                                    wxGetApp().app_config->set("sm_user_name", name);
                                 }
                                 if (data.count("icon")) {
-                                    wxGetApp().sm_get_userinfo()->set_user_icon_url(data["icon"].get<std::string>());
+                                    std::string icon = data["icon"].get<std::string>();
+                                    wxGetApp().sm_get_userinfo()->set_user_icon_url(icon);
+                                    // BBS fix #116: persist avatar URL.
+                                    wxGetApp().app_config->set("sm_user_icon_url", icon);
                                 }
+                                wxGetApp().app_config->save();
                             }
                         });
                     }
                 })
                 .on_error([&](std::string body, std::string error, unsigned status) {
-                   
+
                 })
-                .perform(); 
+                .perform();
         });
         this->RunScript("document.cookie = '';");
         // load_url(m_home_url);

@@ -2003,6 +2003,23 @@ void GUI_App::init_app_config()
     }
     set_logging_level(Slic3r::level_string_to_boost(app_config->get("log_severity_level")));
 
+    // BBS fix #116: Restore Snapmaker login state persisted from the previous session.
+    // WebKit (macOS/Linux) does not preserve session cookies between runs, so the token
+    // must be stored in AppConfig and reloaded here.
+    {
+        std::string sm_token = app_config->get("sm_user_token");
+        if (!sm_token.empty()) {
+            m_login_userinfo.set_user_token(sm_token);
+            m_login_userinfo.set_user_login(true);
+            std::string sm_name = app_config->get("sm_user_name");
+            if (!sm_name.empty())
+                m_login_userinfo.set_user_name(sm_name);
+            std::string sm_icon = app_config->get("sm_user_icon_url");
+            if (!sm_icon.empty())
+                m_login_userinfo.set_user_icon_url(sm_icon);
+            BOOST_LOG_TRIVIAL(info) << "SM login restored from AppConfig for user: " << sm_name;
+        }
+    }
 }
 
 // returns true if found newer version and user agreed to use it
@@ -3685,6 +3702,12 @@ void GUI_App::sm_request_user_logout()
 {
     if (m_login_userinfo.is_user_login()) {
         m_login_userinfo.clear();
+        // BBS fix #116: remove persisted SM credentials so we don't auto-restore
+        // a stale/revoked token on the next launch.
+        app_config->set("sm_user_token", "");
+        app_config->set("sm_user_name", "");
+        app_config->set("sm_user_icon_url", "");
+        app_config->save();
     }
     try {
         if (!sm_login_dlg) {
