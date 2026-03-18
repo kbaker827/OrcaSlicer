@@ -150,8 +150,9 @@ jobs:
             runner: ubuntu-24.04
           - arch: aarch64
             runner: ubuntu-24.04-arm
-    # Don't run scheduled builds on forks:
-    if: ${{ !cancelled() && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
+    # Only run on upstream repo (deploys to upstream nightly; xvfb issues on fork runners):
+    if: ${{ !cancelled() && github.repository == 'OrcaSlicer/OrcaSlicer' }}
+    continue-on-error: true
     runs-on: ${{ matrix.variant.runner }}
     env:
       date:
