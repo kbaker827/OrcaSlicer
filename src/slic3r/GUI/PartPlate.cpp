@@ -1868,6 +1868,13 @@ bool PartPlate::check_tpu_printable_status(const DynamicPrintConfig & config, co
 
 bool PartPlate::check_mixture_of_pla_and_petg(const DynamicPrintConfig &config)
 {
+    // Toolchanger printers (machine_tool_change_time > 0) have fully independent nozzles:
+    // only one tool is mounted and heated at a time, so there is no cross-nozzle
+    // contamination risk between PLA and PETG.  Skip the warning for these printers. (#12073)
+    auto *tool_change_time = config.option<ConfigOptionFloat>("machine_tool_change_time");
+    if (tool_change_time && tool_change_time->value > 0)
+        return true;
+
     bool has_pla = false;
     bool has_petg = false;
 
